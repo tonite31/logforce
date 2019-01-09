@@ -90,8 +90,6 @@
                 }
             }
 
-            console.log(tags, tag);
-
             return check;
         }
 
@@ -169,7 +167,7 @@
                                     tagBadge.innerText = value;
                                     tagBadge.style.marginLeft = '3px';
 
-                                    if(result)
+                                    if(result && tags.length > 0)
                                     {
                                         tagBadge.style.border = '1px solid #a2a243';
                                     }
@@ -187,6 +185,12 @@
                         var dataBadge = document.createElement('div');
                         dataBadge.className = 'log-data';
                         dataBadge.innerText = JSON.stringify(data);
+
+                        if(level === 'error')
+                        {
+                            dataBadge.style.color = 'red';
+                        }
+
                         logElement.appendChild(dataBadge);
 
                         logGroup.appendChild(logElement);
@@ -209,6 +213,8 @@
                 {
                     window.logPanel.removeChild(window.logPanel.children[0]);
                 }
+
+                window.logPanel.scrollTop = window.logPanel.scrollHeight;
             });
         }
     </script>
