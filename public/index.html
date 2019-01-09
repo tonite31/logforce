@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Logforce</title>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io('/logforce-web');
+        socket.on('connect', function()
+        {
+            console.log(socket.id);
+        });
+
+        socket.on('log', function(data)
+        {
+            console.log('데이터 : ', data);
+        });
+    </script>
+</head>
+
+<body>
+
+</body>
+
+</html>
