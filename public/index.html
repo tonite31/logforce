@@ -2,25 +2,237 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
     <title>Logforce</title>
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/index.css">
+
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io('/logforce-web');
-        socket.on('connect', function()
+
+        var namespaces = [];
+        var tags = [];
+
+        $(document).ready(function()
         {
-            console.log(socket.id);
+            $('#namespace').on('keydown', function(e)
+            {
+                if(e.keyCode === 13)
+                {
+                    let split = this.value.split(',');
+
+                    for(var i=0; i<split.length; i++)
+                    {
+                        namespaces.push(split[i].trim());
+                    }
+
+                    e.preventDefault();
+                }
+            });
+
+            $('#tags').on('keydown', function(e)
+            {
+                if(e.keyCode === 13)
+                {
+                    let split = this.value.split(',');
+
+                    for(var i=0; i<split.length; i++)
+                    {
+                        tags.push(split[i].trim());
+                    }
+
+                    e.preventDefault();
+                }
+            });
+
+            setupSocket();
         });
 
-        socket.on('log', function(data)
+        function checkNamespaces(ns)
         {
-            console.log('데이터 : ', data);
-        });
+            if(namespaces.length === 0)
+            {
+                return true;
+            }
+
+            var check = false;
+            for(var i=0; i<namespaces.length; i++)
+            {
+                if(ns === namespaces[i])
+                {
+                    check = true;
+                    break;
+                }
+            }
+
+            return check;
+        }
+
+        function checkTags(tag)
+        {
+            if(tags.length === 0)
+            {
+                return true;
+            }
+
+            var check = false;
+            for(var i=0; i<tags.length; i++)
+            {
+                if(tag.indexOf(tags[i]) !== -1)
+                {
+                    check = true;
+                    break;
+                }
+            }
+
+            console.log(tags, tag);
+
+            return check;
+        }
+
+        function setupSocket()
+        {
+            const socket = io('/logforce-web');
+            socket.on('connect', function()
+            {
+                console.log(socket.id);
+            });
+
+            function analyze(logGroup, logs)
+            {
+                for(var i=0, l=logs.length; i<l; i++)
+                {
+                    let log = logs[i];
+                    if(Array.isArray(log))
+                    {
+                        analyze(logGroup, log);
+                    }
+                    else if(typeof log === 'object')
+                    {
+                        let ns = log.ns;
+                        let tags = log.tags;
+                        let timestamp = log.timestamp;
+                        let level = log.level;
+                        let data = log.data;
+
+                        if(!checkNamespaces(ns))
+                        {
+                            continue;
+                        }
+
+                        var logElement = document.createElement('div');
+                        logElement.className = 'log';
+
+                        var levelBadge = document.createElement('span');
+                        levelBadge.innerText = level;
+                        if(level === 'log')
+                        {
+                            levelBadge.className = 'badge badge-success';
+                        }
+                        else if(level === 'error')
+                        {
+                            levelBadge.className = 'badge badge-danger';
+                        }
+
+                        logElement.appendChild(levelBadge);
+
+                        var nsBadge = document.createElement('span');
+                        nsBadge.className = 'badge badge-primary';
+                        nsBadge.innerText = ns;
+                        nsBadge.style.marginLeft = '3px';
+                        logElement.appendChild(nsBadge);
+
+                        var timestampBadge = document.createElement('span');
+                        timestampBadge.className = 'badge badge-dark';
+                        timestampBadge.innerText = timestamp;
+                        timestampBadge.style.marginLeft = '3px';
+                        logElement.appendChild(timestampBadge);
+
+                        if(tags && typeof tags === 'object')
+                        {
+                            var check = false;
+                            for(let key in tags)
+                            {
+                                if(tags.hasOwnProperty(key))
+                                {
+                                    let value = key + ': ' + tags[key];
+                                    let result = checkTags(value);
+                                    check = check || result;
+
+                                    var tagBadge = document.createElement('span');
+                                    tagBadge.className = 'badge badge-dark';
+                                    tagBadge.innerText = value;
+                                    tagBadge.style.marginLeft = '3px';
+
+                                    if(result)
+                                    {
+                                        tagBadge.style.border = '1px solid #a2a243';
+                                    }
+
+                                    logElement.appendChild(tagBadge);
+                                }
+                            }
+
+                            if(!check)
+                            {
+                                continue;
+                            }
+                        }
+
+                        var dataBadge = document.createElement('div');
+                        dataBadge.className = 'log-data';
+                        dataBadge.innerText = JSON.stringify(data);
+                        logElement.appendChild(dataBadge);
+
+                        logGroup.appendChild(logElement);
+                    }
+                }
+            }
+
+            socket.on('log', function(data)
+            {
+                let logs = data.logs;
+
+                let logGroup = document.createElement('div');
+                logGroup.className = 'log-group';
+
+                analyze(logGroup, logs);
+
+                $('#logPanel').append(logGroup);
+
+                if(window.logPanel.children.length > 100)
+                {
+                    window.logPanel.removeChild(window.logPanel.children[0]);
+                }
+            });
+        }
     </script>
 </head>
 
-<body>
+<body class="text-center">
 
+    <div class="cover-container d-flex w-100 p-3 flex-column">
+        <header class="masthead mb-auto">
+            <div class="inner">
+                <h1 class="masthead-brand">Logforce</h1>
+            </div>
+        </header>
+    </div>
+
+    <div class="setting-panel">
+        <input type="text" placeholder="네임스페이스 입력 후 엔터" id="namespace">
+        <div style="margin-top: 10px;">
+            <input type="text" placeholder="태그 필터 입력 후 엔터" id="tags">
+        </div>
+    </div>
+    <div class="main-panel">
+        <div id="logPanel"></div>
+    </div>
 </body>
 
 </html>
