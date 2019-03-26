@@ -7,8 +7,13 @@ module.exports = function(socket, logforceWeb)
         let origin = Buffer.from(data.log, 'hex');
         let decompressed = LZUTF8.decompress(origin);
 
-        console.log(JSON.stringify(JSON.parse(decompressed), null, 4));
+        let log = JSON.parse(decompressed);
 
-        logforceWeb.emit('log', JSON.parse(decompressed));
+        if(log.ns === 'ChainServer')
+        {
+            console.log(JSON.stringify(log, null, 4));
+        }
+
+        logforceWeb.emit('log', log);
     });
 };
