@@ -6,51 +6,136 @@
 
     <title>Logforce</title>
 
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
     <link rel="stylesheet" href="css/index.css">
 
     <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
+
+        const socket = io('/logforce-web');
+        socket.on('connect', function()
+        {
+            console.log(socket.id);
+        });
+
+        function parse(logs)
+        {
+            for(var i=0, l=logs.length; i<l; i++)
+            {
+                if(Array.isArray(logs[i]))
+                {
+                    parse(logs[i]);
+                }
+                else
+                {
+                    var row = '<tr>';
+
+                    row += '<td>' + logs[i].ns + '</td>';
+
+                    var tags = '';
+                    for(let key in logs[i].tags)
+                    {
+                        let tag = logs[i].tags[key];
+                        tags += '<span>[' + key + ': ' + tag + ']</span>';
+                    }
+
+                    row += '<td>' + logs[i].timestamp + '</td>';
+
+                    row += '<td><div class="log-tags">' + tags + '</div><div class="log-data">' + JSON.stringify(logs[i].data) + '</div></td>';
+
+                    row += '</tr>';
+
+                    let obj = $(row);
+                    obj.find('.log-data').parent().on('click', function()
+                    {
+                        let height = $(this).children('.log-data').css('height');
+                        if(height === '16px')
+                        {
+                            $(this).children('.log-data').css('height', 'auto');
+                        }
+                        else
+                        {
+                            $(this).children('.log-data').css('height', '16px');
+                        }
+                    });
+
+                    obj.find('.log-data').parent().on('contextmenu', function(e)
+                    {
+                            let height = $(this).children('.log-data').css('height');
+                            if(height !== '16px')
+                            {
+                                let data = $(this).children('.log-data').text();
+                                $(this).children('.log-data').html('<div>' + JSON.stringify(JSON.parse(data), null, 4).replace(/\n/gi, '</div><div>').replace(/ /gi, '&nbsp;') + '</div>');
+                            }
+
+                            e.preventDefault();
+                            e.stopPropagation();
+                    });
+
+                    $('#list').append(obj);
+                }
+            }
+        }
+
+        socket.on('log', function(data)
+        {
+            console.log(data);
+
+            let logs = data.logs;
+            parse(logs);
+        });
 
         var namespaces = [];
         var tags = [];
 
         $(document).ready(function()
         {
-            $('#namespace').on('keydown', function(e)
-            {
-                if(e.keyCode === 13)
-                {
-                    let split = this.value.split(',');
-
-                    for(var i=0; i<split.length; i++)
-                    {
-                        namespaces.push(split[i].trim());
-                    }
-
-                    e.preventDefault();
-                }
-            });
-
-            $('#tags').on('keydown', function(e)
-            {
-                if(e.keyCode === 13)
-                {
-                    let split = this.value.split(',');
-
-                    for(var i=0; i<split.length; i++)
-                    {
-                        tags.push(split[i].trim());
-                    }
-
-                    e.preventDefault();
-                }
-            });
-
-            setupSocket();
+            // $('#namespace').on('keydown', function(e)
+            // {
+            //     if(e.keyCode === 13)
+            //     {
+            //         if(!this.value)
+            //         {
+            //             namespaces = [];
+            //         }
+            //         else
+            //         {
+            //             let split = this.value.split(',');
+            //
+            //             for(var i=0; i<split.length; i++)
+            //             {
+            //                 namespaces.push(split[i].trim());
+            //             }
+            //         }
+            //
+            //         e.preventDefault();
+            //     }
+            // });
+            //
+            // $('#tags').on('keydown', function(e)
+            // {
+            //     if(e.keyCode === 13)
+            //     {
+            //         if(!this.value)
+            //         {
+            //             tags = [];
+            //         }
+            //         else
+            //         {
+            //             let split = this.value.split(',');
+            //
+            //             for(var i=0; i<split.length; i++)
+            //             {
+            //                 tags.push(split[i].trim());
+            //             }
+            //         }
+            //
+            //         e.preventDefault();
+            //     }
+            // });
+            //
+            // setupSocket();
         });
 
         function checkNamespaces(ns)
@@ -108,7 +193,12 @@
                     let log = logs[i];
                     if(Array.isArray(log))
                     {
-                        analyze(logGroup, log);
+                        let logSubGroup = document.createElement('div');
+                        logSubGroup.className = 'log-sub-group';
+
+                        logGroup.appendChild(logSubGroup);
+
+                        analyze(logSubGroup, log);
                     }
                     else if(typeof log === 'object')
                     {
@@ -186,11 +276,6 @@
                         dataBadge.className = 'log-data';
                         dataBadge.innerText = JSON.stringify(data);
 
-                        if(level === 'error')
-                        {
-                            dataBadge.style.color = 'red';
-                        }
-
                         logElement.appendChild(dataBadge);
 
                         logGroup.appendChild(logElement);
@@ -207,37 +292,51 @@
 
                 analyze(logGroup, logs);
 
-                $('#logPanel').append(logGroup);
-
-                if(window.logPanel.children.length > 100)
+                if(logGroup.children.length > 0)
                 {
-                    window.logPanel.removeChild(window.logPanel.children[0]);
-                }
+                    $('#logPanel').append(logGroup);
 
-                window.logPanel.scrollTop = window.logPanel.scrollHeight;
+                    if(window.logPanel.children.length > 100)
+                    {
+                        window.logPanel.removeChild(window.logPanel.children[0]);
+                    }
+
+                    window.logPanel.scrollTop = window.logPanel.scrollHeight;
+                }
             });
         }
     </script>
 </head>
 
-<body class="text-center">
-
-    <div class="cover-container d-flex w-100 p-3 flex-column">
-        <header class="masthead mb-auto">
-            <div class="inner">
-                <h1 class="masthead-brand">Logforce</h1>
-            </div>
-        </header>
+<body>
+    <div class="header-wrapper">
+        <h1>LogForce</h1>
+        <table>
+            <colgroup>
+                <col style="width: 10%;"/>
+                <col style="width: 10%;"/>
+                <col style="width: 80%;"/>
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>Namespace</th>
+                    <th>timestamp</th>
+                    <th>data</th>
+                </tr>
+            </thead>
+        </table>
     </div>
+    <div class="body-wrapper">
+        <table>
+            <colgroup>
+                <col style="width: 10%;"/>
+                <col style="width: 10%;"/>
+                <col style="width: 80%;"/>
+            </colgroup>
+            <tbody id="list">
 
-    <div class="setting-panel">
-        <input type="text" placeholder="네임스페이스 입력 후 엔터" id="namespace">
-        <div style="margin-top: 10px;">
-            <input type="text" placeholder="태그 필터 입력 후 엔터" id="tags">
-        </div>
-    </div>
-    <div class="main-panel">
-        <div id="logPanel"></div>
+            </tbody>
+        </table>
     </div>
 </body>
 

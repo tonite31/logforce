@@ -7,6 +7,8 @@ module.exports = function(socket, logforceWeb)
         let origin = Buffer.from(data.log, 'hex');
         let decompressed = LZUTF8.decompress(origin);
 
+        console.log(JSON.parse(decompressed));
+
         logforceWeb.emit('log', JSON.parse(decompressed));
     });
 };
