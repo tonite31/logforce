@@ -301,7 +301,7 @@
                         window.logPanel.removeChild(window.logPanel.children[0]);
                     }
 
-                    window.logPanel.scrollTop = window.logPanel.scrollHeight;
+                    $('.body-wrapper').scrollTop($('.body-wrapper').get(0).scrollHeight);
                 }
             });
         }
