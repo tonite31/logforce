@@ -9,10 +9,7 @@ module.exports = function(socket, logforceWeb)
 
         let log = JSON.parse(decompressed);
 
-        if(log.ns === 'ChainServer')
-        {
-            console.log(JSON.stringify(log, null, 4));
-        }
+        console.log(JSON.stringify(log, null, 4));
 
         logforceWeb.emit('log', log);
     });
