@@ -292,17 +292,17 @@
 
                 analyze(logGroup, logs);
 
-                if(logGroup.children.length > 0)
-                {
-                    $('#logPanel').append(logGroup);
+                $('.body-wrapper').scrollTop($('.body-wrapper').get(0).scrollHeight);
 
-                    if(window.logPanel.children.length > 100)
-                    {
-                        window.logPanel.removeChild(window.logPanel.children[0]);
-                    }
-
-                    $('.body-wrapper').scrollTop($('.body-wrapper').get(0).scrollHeight);
-                }
+                // if(logGroup.children.length > 0)
+                // {
+                //     $('#logPanel').append(logGroup);
+                //
+                //     if(window.list.children.length > 100)
+                //     {
+                //         window.list.removeChild(window.logPanel.children[0]);
+                //     }
+                // }
             });
         }
     </script>
