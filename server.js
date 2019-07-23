@@ -25,7 +25,7 @@ app.use(methodOverride());
 app.set('trust proxy', 1);
 
 app.use(session({
-    secret: 'creeta',
+    secret: 'rayst',
     name: 'sessionId',
     resave: true,
     saveUninitialized: true,
